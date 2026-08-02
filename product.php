@@ -52,10 +52,11 @@ $rev_stmt = $db->prepare("SELECT * FROM product_reviews WHERE product_id = ? ORD
 $rev_stmt->execute([$id]);
 $reviews = $rev_stmt->fetchAll();
 
-$avg_rating = 5.0;
-if (!empty($reviews)) {
+$reviews_count = count($reviews);
+$avg_rating = 0;
+if ($reviews_count > 0) {
     $sum = array_sum(array_column($reviews, 'rating'));
-    $avg_rating = round($sum / count($reviews), 1);
+    $avg_rating = round($sum / $reviews_count, 1);
 }
 
 $storage_arr = !empty($product['storage_options']) ? explode(', ', $product['storage_options']) : ['256 ГБ'];
@@ -626,7 +627,10 @@ if (!empty($_SESSION['cart_details'])) {
         <h2><?= htmlspecialchars($product['name']); ?></h2>
         
         <div class="rating-box">
-            ⭐ <?= $avg_rating; ?> / 5.0 <span style="color: var(--text-muted); font-size: 14px; font-weight: normal;">(Отзывов: <?= count($reviews); ?>)</span>
+            <?php if ($reviews_count > 0): ?>
+                ⭐ <?= $avg_rating; ?> / 5.0 
+            <?php endif; ?>
+            <span style="color: var(--text-muted); font-size: 14px; font-weight: normal;">(Отзывов: <?= $reviews_count; ?>)</span>
         </div>
 
         <div class="price-wrapper">
@@ -757,25 +761,20 @@ if (!empty($_SESSION['cart_details'])) {
     let basePrice = originalPrice;
     let isDealProduct = false;
 
-    // ПРОВЕРЯЕМ, ЯВЛЯЕТСЯ ЛИ ЭТОТ ТОВАР АКТИВНЫМ В ТАЙМЕРЕ АКЦИИ (LocalStorage)
     const urlParams = new URLSearchParams(window.location.search);
     let isDealUrl = urlParams.get('is_deal') === '1';
 
     let storedIndex = localStorage.getItem('deal_product_index');
     
-    // Получаем текущую скидочную цену из LocalStorage или параметров
     if (isDealUrl) {
         isDealProduct = true;
     } else if (storedIndex !== null) {
-        // Опрашиваем сервер или сверяем напрямую
-        // Если индекс совпадает с товаром акции, активируем скидку
         let savedDealId = localStorage.getItem('deal_product_id');
         if (savedDealId && parseInt(savedDealId) === currentProdId) {
             isDealProduct = true;
         }
     }
 
-    // Если перешли с флагом is_deal или товар совпадает, ставим скидку -7%
     if (isDealProduct) {
         basePrice = Math.round(originalPrice * 0.93);
     }
@@ -784,7 +783,6 @@ if (!empty($_SESSION['cart_details'])) {
     let ramAddon = 0;
 
     document.addEventListener("DOMContentLoaded", () => {
-        // Запоминаем ID текущего акционного товара при клике
         if (isDealUrl) {
             localStorage.setItem('deal_product_id', currentProdId);
         }

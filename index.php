@@ -1,11 +1,6 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['user_id'])) {
-    $_SESSION['user_id'] = 0;
-    $_SESSION['username'] = 'Гость';
-}
-
 try {
     $db = new PDO('mysql:host=localhost;dbname=tech_shop;charset=utf8', 'root', '', [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -16,8 +11,10 @@ try {
 }
 
 // Загрузка данных авторизованного пользователя (для аватарки)
+$is_logged_in = !empty($_SESSION['user_id']);
 $user_avatar = 'img/default.jpg';
-if ($_SESSION['user_id'] > 0) {
+
+if ($is_logged_in) {
     $u_stmt = $db->prepare("SELECT avatar FROM users WHERE id = ?");
     $u_stmt->execute([$_SESSION['user_id']]);
     $u_data = $u_stmt->fetch();
@@ -204,7 +201,7 @@ if (!empty($_SESSION['cart_details'])) {
         :root {
             --bg-color: #0b0f19;
             --panel-bg: #131926;
-            --border-color: #1f293d;
+            --border-color: rgba(255, 255, 255, 0.08);
             --text-main: #ffffff;
             --text-muted: #8a99ad;
             --card-img-bg: #1a2234;
@@ -212,12 +209,13 @@ if (!empty($_SESSION['cart_details'])) {
             --shadow: rgba(0, 0, 0, 0.5);
             --accent-green: #00e676;
             --accent-blue: #2563eb;
+            --accent-red: #ef4444;
         }
 
         [data-theme="light"] {
             --bg-color: #f3f4f6;
             --panel-bg: #ffffff;
-            --border-color: #e5e7eb;
+            --border-color: rgba(0, 0, 0, 0.08);
             --text-main: #1f2937;
             --text-muted: #6b7280;
             --card-img-bg: #f9fafb;
@@ -250,7 +248,12 @@ if (!empty($_SESSION['cart_details'])) {
             align-items: center;
         }
 
-        .nav-buttons { display: flex; gap: 10px; align-items: center; }
+        /* НАВБАР КНОПКИ */
+        .nav-buttons { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+        }
 
         .nav-link-btn {
             background-color: var(--card-img-bg);
@@ -259,46 +262,48 @@ if (!empty($_SESSION['cart_details'])) {
             border-radius: 20px;
             font-size: 14px;
             font-weight: 600;
-            display: flex;
+            display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
+            height: 38px;
+            box-sizing: border-box;
             text-decoration: none;
-            transition: all 0.3s;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-main) !important;
+            cursor: pointer;
         }
 
-        .nav-link-btn, .nav-link-btn * { color: var(--text-main) !important; }
-
+        /* ЭФФЕКТ ПРИБЛИЖЕНИЯ ПРИ НАВЕДЕНИИ */
         .nav-link-btn:hover {
-            background-color: var(--accent-blue);
-            border-color: var(--accent-blue);
-            box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
-            transform: translateY(-2px);
+            border-color: rgba(37, 99, 235, 0.4);
+            background-color: rgba(37, 99, 235, 0.15);
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
+            transform: scale(1.06);
         }
 
-        /* Стиль для кнопки профиля с аватаркой */
+        /* Модификатор кнопки выхода */
+        .nav-link-btn.btn-logout {
+            border-color: rgba(239, 68, 68, 0.25);
+            color: #ef4444 !important;
+        }
+
+        .nav-link-btn.btn-logout:hover {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: var(--accent-red);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+            transform: scale(1.06);
+        }
+
+        /* Модификатор кнопки профиля */
         .profile-nav-btn {
-            background-color: var(--card-img-bg);
-            border: 1px solid var(--accent-blue);
-            padding: 4px 14px 4px 6px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .profile-nav-btn:hover {
-            background-color: var(--accent-blue);
-            box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
-            transform: translateY(-2px);
+            padding: 4px 16px 4px 6px;
+            border-color: rgba(37, 99, 235, 0.3);
         }
 
         .header-avatar {
-            width: 32px;
-            height: 32px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             object-fit: cover;
             border: 1px solid var(--accent-blue);
@@ -309,7 +314,7 @@ if (!empty($_SESSION['cart_details'])) {
             background: var(--card-img-bg);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            font-size: 18px;
+            font-size: 16px;
             width: 38px;
             height: 38px;
             border-radius: 50%;
@@ -317,7 +322,13 @@ if (!empty($_SESSION['cart_details'])) {
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s;
+            transition: all 0.25s;
+            box-sizing: border-box;
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
         }
 
         .badge {
@@ -405,7 +416,9 @@ if (!empty($_SESSION['cart_details'])) {
             background-color: #2563eb; color: #ffffff;
             border: none; padding: 12px 25px; border-radius: 25px;
             font-weight: 600; cursor: pointer;
+            transition: transform 0.2s;
         }
+        .search-btn:hover { transform: scale(1.05); }
 
         .search-suggestions {
             position: absolute; top: 100%; left: 0; right: 0;
@@ -446,7 +459,8 @@ if (!empty($_SESSION['cart_details'])) {
         }
 
         .filter-btn img { width: 24px; height: 24px; object-fit: contain; }
-        .filter-btn:hover, .filter-btn.active { background-color: #2563eb; color: #ffffff; border-color: #2563eb; }
+        .filter-btn:hover { transform: scale(1.05); background-color: #2563eb; color: #ffffff; border-color: #2563eb; }
+        .filter-btn.active { background-color: #2563eb; color: #ffffff; border-color: #2563eb; }
 
         .brand-filter-row {
             display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
@@ -462,7 +476,7 @@ if (!empty($_SESSION['cart_details'])) {
         }
 
         .brand-logo-btn img { width: 32px; height: 32px; object-fit: contain; }
-        .brand-logo-btn:hover { background-color: #3b82f6; color: #ffffff; border-color: #3b82f6; box-shadow: 0 0 12px rgba(59, 130, 246, 0.3); }
+        .brand-logo-btn:hover { transform: scale(1.05); background-color: #3b82f6; color: #ffffff; border-color: #3b82f6; box-shadow: 0 0 12px rgba(59, 130, 246, 0.3); }
         .brand-logo-btn.active { background: #2563eb; border-color: #2563eb; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25); color: #ffffff; }
 
         .sort-select {
@@ -522,6 +536,7 @@ if (!empty($_SESSION['cart_details'])) {
             font-size: 15px;
             transition: all 0.2s;
         }
+        .icon-btn:hover { transform: scale(1.15); }
 
         .icon-btn.liked { color: #ef4444 !important; border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
 
@@ -574,10 +589,10 @@ if (!empty($_SESSION['cart_details'])) {
         .buy-btn {
             background-color: #00e676; color: #000; border: none;
             padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            transition: all 0.2s;
         }
 
-        .buy-btn:hover { background-color: #00c853; }
+        .buy-btn:hover { background-color: #00c853; transform: scale(1.05); }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -619,7 +634,9 @@ if (!empty($_SESSION['cart_details'])) {
             background-color: #00e676; border-radius: 50%; display: flex;
             align-items: center; justify-content: center; text-decoration: none;
             z-index: 9999; box-shadow: 0 8px 25px rgba(0, 230, 118, 0.4);
+            transition: transform 0.2s;
         }
+        .floating-cart:hover { transform: scale(1.1); }
 
         .floating-badge {
             position: absolute; top: -3px; right: -3px; background-color: #ef4444;
@@ -653,21 +670,24 @@ if (!empty($_SESSION['cart_details'])) {
             </h1>
         </div>
         <div class="nav-buttons">
-            <button id="theme-toggle" class="theme-toggle-btn">🌙</button>
+            <button id="theme-toggle" class="theme-toggle-btn" title="Сменить тему">🌙</button>
             <a href="wishlist.php" class="nav-link-btn">❤️ Избранное <span id="wishlist-count" class="badge">0</span></a>
-            <a href="cart.php" class="nav-link-btn" style="border-color: #00e676;">🛒 Корзина <span id="cart-count" class="badge" style="background-color: #00e676; color: #000;"><?php echo $cart_count; ?></span></a>
+            <a href="cart.php" class="nav-link-btn" style="border-color: rgba(0, 230, 118, 0.3);">🛒 Корзина <span id="cart-count" class="badge" style="background-color: #00e676; color: #000;"><?php echo $cart_count; ?></span></a>
             
             <?php if (!empty($_SESSION['is_admin'])): ?>
-                <a href="admin.php" class="nav-link-btn" style="border-color: #3b82f6;">⚙️ Админка</a>
+                <a href="admin.php" class="nav-link-btn" style="border-color: rgba(59, 130, 246, 0.3);">⚙️ Админка</a>
             <?php endif; ?>
 
-            <!-- КНОПКА ЛИЧНОГО КАБИНЕТА С СОВРЕМЕННОЙ АВАТАРКОЙ В КРАЙНЕМ ПРАВОМ БЛОКЕ -->
-            <a href="profile.php" class="profile-nav-btn">
-                <img src="<?= htmlspecialchars($user_avatar); ?>" alt="Аватар" class="header-avatar" onerror="this.src='img/default.jpg';">
-                <span>Кабинет</span>
-            </a>
-
-            <a href="logout.php" class="nav-link-btn" style="border-color: #ef4444;" title="Выйти">🚪</a>
+            <!-- ПРОВЕРКА АВТОРИЗАЦИИ ПОЛЬЗОВАТЕЛЯ -->
+            <?php if ($is_logged_in): ?>
+                <a href="profile.php" class="nav-link-btn profile-nav-btn">
+                    <img src="<?= htmlspecialchars($user_avatar); ?>" alt="Аватар" class="header-avatar" onerror="this.src='img/default.jpg';">
+                    <span>Кабинет</span>
+                </a>
+                <a href="logout.php" class="nav-link-btn btn-logout" title="Выйти из аккаунта">🚪 Выход</a>
+            <?php else: ?>
+                <a href="auth.php" class="nav-link-btn" style="border-color: #00e676; background: rgba(0, 230, 118, 0.15); color: #00e676 !important;">🔑 Войти</a>
+            <?php endif; ?>
         </div>
     </div>
 </header>

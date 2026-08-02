@@ -35,7 +35,6 @@ if (isset($_GET['ajax_check'])) {
             echo json_encode(['status' => 'error', 'message' => '⚠️ Некорректный email']);
             exit;
         }
-        // Безопасная проверка существования колонки email
         $u_cols = $db->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
         if (in_array('email', $u_cols)) {
             $stmt = $db->prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)');
@@ -51,12 +50,12 @@ if (isset($_GET['ajax_check'])) {
 }
 
 $error = '';
-if (isset($_SESSION['user_id'])) {
+if (isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0) {
     header('Location: index.php');
     exit;
 }
 
-// ОБРАБОТКА ФОРМЫ
+// ОБРАБОТКА ФОРМЫ (ОТПРАВКА НА СЕРВЕР)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'login';
     $username = trim($_POST['username'] ?? '');
@@ -85,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($password !== $password_confirm) {
             $error = 'Введенные пароли не совпадают.';
         } else {
-            // Обработка загруженного аватара
+            // Обработка аватара
             $avatar_path = '';
             if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
                 $ext = strtolower(pathinfo($_FILES['avatar']['name'], PATHINFO_EXTENSION));
@@ -139,10 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['is_admin'] = (mb_strtolower($user['username']) === 'admin');
 
-                if (isset($_POST['remember_me'])) {
-                    setcookie('remember_user', $user['username'], time() + (3600 * 24 * 30), "/");
-                }
-
                 header('Location: index.php');
                 exit;
             } else {
@@ -183,23 +178,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         .auth-container {
-            width: 440px;
-            max-width: 90%;
+            width: 440px; max-width: 90%;
             background: var(--panel-bg);
-            padding: 35px;
-            border-radius: 24px;
+            padding: 35px; border-radius: 24px;
             border: 1px solid var(--border-color);
             box-shadow: 0 15px 35px rgba(0,0,0,0.6);
             backdrop-filter: blur(20px);
             box-sizing: border-box;
         }
 
+        .auth-logo-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .auth-logo-link {
+            text-decoration: none;
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            transition: opacity 0.2s;
+        }
+        .auth-logo-link:hover {
+            opacity: 0.9;
+        }
+        .auth-logo-link span {
+            color: var(--accent-blue);
+        }
+
         .auth-tabs {
-            display: flex;
-            background: rgba(7, 10, 18, 0.6);
+            display: flex; background: rgba(7, 10, 18, 0.6);
             border: 1px solid var(--border-color);
-            border-radius: 14px;
-            margin-bottom: 25px; padding: 4px;
+            border-radius: 14px; margin-bottom: 25px; padding: 4px;
         }
 
         .tab-btn {
@@ -236,9 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
             cursor: pointer; opacity: 0.6; user-select: none; font-size: 16px;
         }
-        .password-toggle:hover { opacity: 1; }
 
-        /* ИНДИКАТОР ПОЛОСКИ СИЛЫ ПАРОЛЯ */
         .strength-bar-wrapper {
             height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px;
             margin-top: 8px; overflow: hidden; display: none;
@@ -250,24 +258,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .rule-item { color: var(--text-muted); }
         .rule-item.valid { color: var(--accent-green); }
 
-        /* КАСТОМНЫЙ DRAG & DROP БЛОК ДЛЯ ФОТО */
         .drop-zone {
-            border: 2px dashed var(--border-color);
-            border-radius: 14px;
-            padding: 15px;
-            text-align: center;
-            background: rgba(7, 10, 18, 0.4);
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--accent-blue);
-            background: rgba(37, 99, 235, 0.08);
+            border: 2px dashed var(--border-color); border-radius: 14px;
+            padding: 15px; text-align: center; background: rgba(7, 10, 18, 0.4);
+            cursor: pointer; transition: all 0.3s;
         }
         .drop-zone-text { font-size: 12px; color: var(--text-muted); pointer-events: none; }
         .avatar-preview { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; display: none; margin: 0 auto 6px auto; }
 
-        /* СЛАЙДЕР КАПЧА */
         .captcha-slider-box {
             background: rgba(7, 10, 18, 0.5); border: 1px solid var(--border-color);
             border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 20px;
@@ -282,7 +280,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             width: 40px; height: 40px; background: var(--accent-blue); border-radius: 50%;
             position: absolute; left: 0; top: 0; cursor: pointer; display: flex;
             align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(37,99,235,0.5);
-            transition: background 0.2s;
         }
 
         .btn-submit {
@@ -297,10 +294,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 13px; font-weight: 600; text-align: center;
         }
         .alert-error { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); color: var(--accent-red); }
-
         .status-msg { font-size: 11px; margin-top: 4px; font-weight: 600; }
 
-        /* ОКНО БОНУСА */
         .welcome-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center;
@@ -309,9 +304,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .welcome-card {
             background: #131926; border: 1px solid var(--accent-green);
             border-radius: 24px; padding: 35px; text-align: center; max-width: 380px; width: 90%;
-            box-shadow: 0 0 40px rgba(0,230,118,0.2); animation: popUp 0.4s ease;
+            box-shadow: 0 0 40px rgba(0,230,118,0.2);
         }
-        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .promo-badge {
             background: rgba(0, 230, 118, 0.15); border: 1px dashed var(--accent-green);
             color: var(--accent-green); font-size: 22px; font-weight: 800; padding: 10px 20px;
@@ -338,6 +332,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php endif; ?>
 
 <div class="auth-container">
+    <!-- ЛОГОТИП САЙТА -->
+    <div class="auth-logo-header">
+        <a href="index.php" class="auth-logo-link">Cyber<span>Phone</span></a>
+    </div>
+
     <div class="auth-tabs">
         <button type="button" id="tab-login" class="tab-btn active" onclick="setMode('login')">Вход</button>
         <button type="button" id="tab-register" class="tab-btn" onclick="setMode('register')">Регистрация</button>
@@ -347,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="alert alert-error"><?= htmlspecialchars($error); ?></div>
     <?php endif; ?>
 
-    <form id="auth-form" method="POST" enctype="multipart/form-data" autocomplete="off">
+    <form id="auth-form" action="auth.php" method="POST" enctype="multipart/form-data" autocomplete="off" onsubmit="return validateOnSubmit(event)">
         <input type="hidden" id="auth-action" name="action" value="login">
         <input type="hidden" id="captcha-verified" name="captcha_verified" value="0">
 
@@ -358,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div id="username-status" class="status-msg"></div>
         </div>
 
-        <!-- ПОЛЯ ДЛЯ РЕГИСТРАЦИИ -->
+        <!-- ПОЛЯ РЕГИСТРАЦИИ -->
         <div id="reg-fields" style="display: none;">
             <div class="form-group">
                 <label>Email *</label>
@@ -376,7 +375,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="text" id="phone" name="phone" class="form-control" placeholder="+380 (__) ___-__-__">
             </div>
 
-            <!-- DRAG & DROP АВАТАР -->
             <div class="form-group">
                 <label>Фото профиля</label>
                 <div class="drop-zone" id="drop-zone" onclick="document.getElementById('avatar-input').click();">
@@ -395,7 +393,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="password-toggle" onclick="togglePassword('password')">👁️</span>
             </div>
 
-            <!-- ПОЛОСКА СИЛЫ ПАРОЛЯ -->
             <div id="strength-wrapper" class="strength-bar-wrapper">
                 <div id="strength-bar" class="strength-bar-fill"></div>
             </div>
@@ -409,7 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
 
-        <!-- ПОВТОР ПАРОЛЯ С ПРОВЕРКОЙ -->
+        <!-- ПОВТОР ПАРОЛЯ -->
         <div class="form-group" id="confirm-pwd-group" style="display: none;">
             <label>Повторите пароль *</label>
             <div class="password-wrapper">
@@ -430,7 +427,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div id="terms-group" style="display: none; margin-bottom: 20px;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; color: var(--text-muted); font-size: 12px;">
-                <input type="checkbox" name="terms" style="accent-color: var(--accent-blue);"> Я принимаю условия использования
+                <input type="checkbox" id="terms" name="terms" style="accent-color: var(--accent-blue);"> Я принимаю условия использования
             </label>
         </div>
 
@@ -456,12 +453,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         document.getElementById('btn-submit').textContent = isReg ? 'Зарегистрироваться ✨' : 'Войти в аккаунт';
     }
 
+    function validateOnSubmit(e) {
+        const mode = document.getElementById('auth-action').value;
+        if (mode === 'login') {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            if (!u || !p) {
+                alert('Пожалуйста, введите логин и пароль.');
+                return false;
+            }
+            return true;
+        } else {
+            const captchaOK = document.getElementById('captcha-verified').value === '1';
+            const termsOK = document.getElementById('terms').checked;
+            
+            if (!captchaOK) {
+                alert('Передвиньте слайдер проверки на робота!');
+                return false;
+            }
+            if (!termsOK) {
+                alert('Примите условия использования!');
+                return false;
+            }
+            return true;
+        }
+    }
+
     function togglePassword(id) {
         const el = document.getElementById(id);
         el.type = el.type === 'password' ? 'text' : 'password';
     }
 
-    // МАСКА ТЕЛЕФОНА +380 (XX) XXX-XX-XX
+    // МАСКА ТЕЛЕФОНА
     document.getElementById('phone').addEventListener('input', function (e) {
         let matrix = "+380 (__) ___-__-__",
             i = 0,
@@ -511,7 +534,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }, 300);
     });
 
-    // ИНДИКАТОР СИЛЫ ПАРОЛЯ
+    // СИЛА ПАРОЛЯ
     document.getElementById('password').addEventListener('input', function() {
         if (document.getElementById('auth-action').value !== 'register') return;
 
@@ -544,29 +567,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             bar.style.background = '#00e676'; txt.textContent = '🟢 Отличный и надежный!'; txt.style.color = '#00e676';
         }
-
-        checkPasswordMatch();
     });
-
-    // ПРОВЕРКА СОВПАДЕНИЯ ПАРОЛЕЙ
-    document.getElementById('password_confirm').addEventListener('input', checkPasswordMatch);
-
-    function checkPasswordMatch() {
-        if (document.getElementById('auth-action').value !== 'register') return;
-        const p1 = document.getElementById('password').value;
-        const p2 = document.getElementById('password_confirm').value;
-        const status = document.getElementById('confirm-status');
-
-        if (!p2) { status.textContent = ''; return; }
-
-        if (p1 === p2) {
-            status.textContent = '✔ Пароли совпадают';
-            status.style.color = '#00e676';
-        } else {
-            status.textContent = '❌ Пароли не совпадают';
-            status.style.color = '#ef4444';
-        }
-    }
 
     // DRAG & DROP АВАТАР
     const dropZone = document.getElementById('drop-zone');
@@ -574,32 +575,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const avatarPreview = document.getElementById('avatar-preview');
     const dropZoneText = document.getElementById('drop-zone-text');
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); }, false);
-    });
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); }, false);
-    });
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); }, false);
+        });
 
-    dropZone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        if (files.length > 0) {
-            avatarInput.files = files;
-            showPreview(files[0]);
-        }
-    });
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                avatarInput.files = files;
+                showPreview(files[0]);
+            }
+        });
 
-    avatarInput.addEventListener('change', function() {
-        if (this.files.length > 0) showPreview(this.files[0]);
-    });
+        avatarInput.addEventListener('change', function() {
+            if (this.files.length > 0) showPreview(this.files[0]);
+        });
+    }
 
     function showPreview(file) {
         const reader = new FileReader();
         reader.onload = function(e) {
             avatarPreview.src = e.target.result;
             avatarPreview.style.display = 'block';
-            dropZoneText.textContent = '✓ Фото выбрано! Кликните, чтобы сменить';
+            dropZoneText.textContent = '✓ Фото выбрано!';
         }
         reader.readAsDataURL(file);
     }
